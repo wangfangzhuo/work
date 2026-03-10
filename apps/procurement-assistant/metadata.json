@@ -1,0 +1,5 @@
+{
+  "name": "AI采购 - 对话式药店采购助手",
+  "description": "一站式药店采购决策平台，集成1药城、药师帮等多平台价格对比，支持对话式询价与一键下单。",
+  "requestFramePermissions": []
+}
