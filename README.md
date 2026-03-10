@@ -7,6 +7,10 @@
 ### 1. 跨平台采购助手 (`apps/procurement-assistant`)
 用 AI 帮助企业/个人跨平台比价、整理采购需求、生成报价单。
 
+**线上地址：** https://work1-4orv.vercel.app/
+**技术栈：** React + Vite + Tailwind + Gemini AI
+**部署平台：** Vercel
+
 **核心功能规划：**
 - 输入商品需求 → AI 解析结构化采购清单
 - 多平台价格聚合对比（1688、京东企业等）
@@ -52,8 +56,9 @@
 
 ## 开发进度
 
-- [ ] 项目初始化
-- [ ] 采购助手 - AI 对话原型
-- [ ] 采购助手 - MVP 上线
+- [x] 项目初始化
+- [x] 采购助手 - AI 对话原型（Google AI Studio 生成）
+- [x] 采购助手 - MVP 上线 → [work1-4orv.vercel.app](https://work1-4orv.vercel.app/)
+- [ ] 采购助手 - 接入真实比价数据
 - [ ] 1药城 - 交互流程调研
 - [ ] 1药城 - AI 改造 Demo
