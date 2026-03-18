@@ -83,7 +83,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  type?: 'text' | 'product_comparison' | 'action_summary' | 'scraping_status' | 'data_summary' | 'supplier_management' | 'supplier_form' | 'cart_summary' | 'auth_decision' | 'hero_intro';
+  type?: 'text' | 'product_comparison' | 'action_summary' | 'scraping_status' | 'data_summary' | 'supplier_management' | 'supplier_form' | 'cart_summary' | 'auth_decision' | 'hero_intro' | 'checkout_result';
   data?: any;
 }
 
@@ -352,6 +352,97 @@ const HeroIntro = () => {
           </p>
         </div>
       </div>
+    </div>
+  );
+};
+
+const CheckoutResult = ({ data }: { data: any }) => {
+  return (
+    <div className="space-y-4 my-4">
+      {data.onlineGroups.map((group: any, idx: number) => (
+        <div key={idx} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <PlatformIcon platform={group.platform} size="sm" />
+              <h3 className="text-sm font-bold text-zinc-900">{group.platform.name}</h3>
+            </div>
+            {group.type === 'cart' ? (
+              <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-100">
+                已加入购物车
+              </span>
+            ) : (
+              <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100">
+                需手动下单
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {group.items.map((item: any, i: number) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="text-xs font-bold text-zinc-900 truncate">{item.productName}</p>
+                  <p className="text-[10px] text-zinc-400">{item.spec}</p>
+                </div>
+                {group.type === 'pdp' && (
+                  <a 
+                    href={item.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline shrink-0"
+                  >
+                    去商详页 <ExternalLink size={10} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            {group.type === 'cart' ? (
+              <a 
+                href={group.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex-1 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
+              >
+                <ShoppingCart size={14} />
+                前往购物车结算
+              </a>
+            ) : (
+              <button className="flex-1 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-xl text-xs font-bold hover:bg-zinc-50 transition-all flex items-center justify-center gap-2">
+                <ArrowUpDown size={14} className="rotate-180" />
+                下载该平台采购清单
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {data.offlineGroups.length > 0 && (
+        <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
+              <Truck size={18} />
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900">线下商业采购单</h3>
+          </div>
+          <p className="text-xs text-zinc-500">已为您生成以下供应商的采购确认单，请下载后发送给对应的业务员。</p>
+          <div className="space-y-2">
+            {data.offlineGroups.map((group: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                <div className="flex items-center gap-3">
+                  <PlatformIcon platform={group.platform} size="sm" />
+                  <span className="text-xs font-bold text-zinc-900">{group.platform.name}</span>
+                </div>
+                <button className="flex items-center gap-1 text-[10px] font-bold text-purple-600 hover:underline">
+                  下载 Excel <ArrowUpDown size={10} className="rotate-180" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1518,32 +1609,71 @@ export default function App() {
   const handleCheckout = () => {
     setIsTyping(true);
     setTimeout(() => {
-      const onlinePlatforms = Array.from(new Set(cartItems.map(item => item.platformId)))
+      const itemsByPlatform: Record<string, CartItem[]> = {};
+      cartItems.forEach(item => {
+        if (!itemsByPlatform[item.platformId]) itemsByPlatform[item.platformId] = [];
+        itemsByPlatform[item.platformId].push(item);
+      });
+
+      const platformIds = Object.keys(itemsByPlatform);
+      const onlinePlatforms = platformIds
         .map(id => platforms.find(p => p.id === id))
         .filter(p => p?.type === 'online');
       
-      const offlinePlatforms = Array.from(new Set(cartItems.map(item => item.platformId)))
+      const offlinePlatforms = platformIds
         .map(id => platforms.find(p => p.id === id))
         .filter(p => p?.type === 'offline');
 
       let content = '🎉 结算指令已下达！\n\n';
-      
-      if (onlinePlatforms.length > 0) {
-        content += `📍 线上平台：已在 ${onlinePlatforms.map(p => p?.name).join('、')} 自动生成待支付订单，请您登录对应平台完成支付即可。\n\n`;
+      const checkoutData: any = {
+        onlineGroups: [],
+        offlineGroups: []
+      };
+
+      // 1yc special handling
+      const ycItems = itemsByPlatform['1yc'];
+      if (ycItems) {
+        content += `📍 **1药城**：已为您将 ${ycItems.length} 件商品加入购物车。您可以直接前往结算。\n`;
+        checkoutData.onlineGroups.push({
+          platform: platforms.find(p => p.id === '1yc'),
+          type: 'cart',
+          url: 'https://www.1yao.com/cart',
+          items: ycItems
+        });
       }
-      
+
+      // Other online platforms
+      onlinePlatforms.filter(p => p?.id !== '1yc').forEach(p => {
+        if (!p) return;
+        const items = itemsByPlatform[p.id];
+        content += `📍 **${p.name}**：请点击下方链接进入商品详情页手动加入购物车。\n`;
+        checkoutData.onlineGroups.push({
+          platform: p,
+          type: 'pdp',
+          items: items.map(item => ({
+            ...item,
+            url: `https://www.example.com/pdp/${item.productName}` // Mock PDP URL
+          }))
+        });
+      });
+
       if (offlinePlatforms.length > 0) {
-        content += `📍 线下商业：已为您生成 ${offlinePlatforms.map(p => p?.name).join('、')} 的采购确认单 Excel 文件，请下载后发送给对应的业务员。`;
+        content += `\n📍 **线下商业**：已为您生成采购确认单 Excel 文件，请下载后发送给对应的业务员。`;
+        checkoutData.offlineGroups = offlinePlatforms.map(p => ({
+          platform: p,
+          items: itemsByPlatform[p!.id]
+        }));
       }
 
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'assistant',
         content,
-        data: offlinePlatforms.length > 0 ? { hasDownload: true } : undefined
+        type: 'checkout_result',
+        data: checkoutData
       }]);
       
-      setCartItems([]); // Clear cart after checkout
+      setCartItems([]);
       setIsTyping(false);
     }, 1500);
   };
@@ -2028,6 +2158,10 @@ export default function App() {
                           下载
                         </button>
                       </div>
+                    )}
+
+                    {msg.type === 'checkout_result' && (
+                      <CheckoutResult data={msg.data} />
                     )}
 
                     {msg.type === 'auth_decision' && (
